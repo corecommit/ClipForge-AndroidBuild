@@ -1,2 +1,2 @@
 # ClipForge-AndroidBuild
-My personal clipping tool for Clipping long form content feel free to check it out
+ClipForge is an Android app that turns long videos into short, hook-worthy clips. It listens for emphatic talking, reveals, laughs and action, reads the transcript for hook lines, and cuts clips on natural sentence boundaries. It runs fully on your phone and in the background. A built-in downloader saves YouTube videos, Shorts and Instagram reels straight to your gallery in up to 1080p.
