@@ -112,7 +112,7 @@ fun EditorScreen(vm: AppViewModel, nav: NavController) {
     LaunchedEffect(player) {
         var lastSeg: com.clipforge.app.engine.Seg? = null
         while (true) {
-            delay(80)
+            delay(if (player.isPlaying) 80 else 250)
             val segs = m.segs.toList()
             val idx = player.currentMediaItemIndex
             val seg = segs.getOrNull(idx)
@@ -147,7 +147,7 @@ fun EditorScreen(vm: AppViewModel, nav: NavController) {
                 color = TextPrimary, fontSize = 20.sp
             )
             Text(m.title, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
-            GradientButton("Export", Modifier.width(110.dp)) { player.pause(); vm.exportEdit(m) }
+            PrimaryButton("Export", Modifier.width(110.dp)) { player.pause(); vm.exportEdit(m) }
         }
 
         // ---- preview: the whole picture is fitted inside the canvas, exactly like the export
@@ -222,12 +222,12 @@ fun EditorScreen(vm: AppViewModel, nav: NavController) {
         }
 
         // ---- timeline: one block per piece, tap to select
-        BoxWithConstraints(Modifier.fillMaxWidth().height(48.dp).glass(12.dp)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().height(48.dp).solidCard(12.dp)) {
             Row(Modifier.fillMaxSize().padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 segSnap.forEachIndexed { i, s ->
                     Box(
                         Modifier.weight(max(1L, s.outMs).toFloat()).fillMaxHeight().clip(RoundedCornerShape(8.dp))
-                            .background(if (i == m.selected) Accent.copy(alpha = 0.85f) else GlassFillStrong)
+                            .background(if (i == m.selected) ButtonBlue else PanelStrong)
                             .clickable { m.selected = i },
                         contentAlignment = Alignment.Center
                     ) {
@@ -245,7 +245,7 @@ fun EditorScreen(vm: AppViewModel, nav: NavController) {
         // ---- panels
         Spacer(Modifier.height(8.dp))
         if (panel.isNotEmpty() && sel != null) {
-            Column(Modifier.fillMaxWidth().glass(18.dp).padding(12.dp)) {
+            Column(Modifier.fillMaxWidth().solidCard(18.dp).padding(12.dp)) {
                 when (panel) {
                     "trim" -> {
                         Muted("Trim the selected piece")
@@ -341,7 +341,7 @@ fun EditorScreen(vm: AppViewModel, nav: NavController) {
 @Composable
 private fun ToolChip(label: String, active: Boolean, onClick: () -> Unit) {
     Box(
-        Modifier.glass(14.dp, strong = active).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 11.dp),
+        Modifier.solidCard(14.dp, strong = active).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(label, color = if (active) Accent2 else TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
@@ -359,7 +359,7 @@ private fun TextPanel(m: com.clipforge.app.engine.EditorModel, outPos: Long) {
         placeholder = { Text("Type your text", color = TextSecondary) },
         shape = RoundedCornerShape(14.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Accent, unfocusedBorderColor = Color(0x40FFFFFF),
+            focusedBorderColor = Accent, unfocusedBorderColor = Edge,
             focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, cursorColor = Accent
         )
     )
@@ -395,7 +395,7 @@ private fun CaptionPanel(vm: AppViewModel, m: com.clipforge.app.engine.EditorMod
         m.words.isEmpty() -> {
             Muted("Creates captions from the speech in your video. Works offline; the first time it downloads a ~40 MB speech model. English only.")
             Spacer(Modifier.height(8.dp))
-            GradientButton("Generate captions", Modifier.fillMaxWidth()) { vm.generateCaptions(m) }
+            PrimaryButton("Generate captions", Modifier.fillMaxWidth()) { vm.generateCaptions(m) }
         }
         else -> {
             Row(verticalAlignment = Alignment.CenterVertically) {

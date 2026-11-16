@@ -103,11 +103,13 @@ fun HomeScreen(vm: AppViewModel, nav: NavController) {
     var url by remember { mutableStateOf("") }
     // -1 = not chosen yet: open on "Continue" when something is waiting, otherwise on "New project".
     var tab by rememberSaveable { mutableStateOf(-1) }
-    val continueItems = projects.filter { p ->
-        when (p.status) {
-            "ANALYZING", "FAILED" -> true
-            "READY" -> (unexported[p.id] ?: 0) > 0
-            else -> false
+    val continueItems = remember(projects, unexported) {
+        projects.filter { p ->
+            when (p.status) {
+                "ANALYZING", "FAILED" -> true
+                "READY" -> (unexported[p.id] ?: 0) > 0
+                else -> false
+            }
         }
     }
     val tabIndex = if (tab >= 0) tab else if (continueItems.isNotEmpty()) 1 else 0
@@ -128,7 +130,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavController) {
         Modifier.fillMaxSize().appBackdrop().systemBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).glass(12.dp, strong = true), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(38.dp).solidCard(12.dp, strong = true), contentAlignment = Alignment.Center) {
                 androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.clipforge.app.R.drawable.ic_logo), null, Modifier.size(24.dp))
             }
             Spacer(Modifier.size(10.dp))
@@ -154,7 +156,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavController) {
         Muted("Give ClipForge a video. It finds the moments most likely to hook people (reveals, emphatic talk, big reactions, action) and cuts each one into its own clip.")
 
         Spacer(Modifier.height(28.dp))
-        Column(Modifier.fillMaxWidth().glass(24.dp).padding(16.dp)) {
+        Column(Modifier.fillMaxWidth().solidCard(24.dp).padding(16.dp)) {
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
@@ -164,12 +166,12 @@ fun HomeScreen(vm: AppViewModel, nav: NavController) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Accent, unfocusedBorderColor = Color(0x40FFFFFF),
+                    focusedBorderColor = Accent, unfocusedBorderColor = Edge,
                     focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, cursorColor = Accent
                 )
             )
             Spacer(Modifier.height(12.dp))
-            GradientButton("Get video from link", Modifier.fillMaxWidth(), enabled = imp !is ImportUi.Loading) { vm.fetchYoutube(url) }
+            PrimaryButton("Get video from link", Modifier.fillMaxWidth(), enabled = imp !is ImportUi.Loading) { vm.fetchYoutube(url) }
             Spacer(Modifier.height(10.dp))
             Muted("Only use videos you own or have permission to save.")
         }
@@ -200,7 +202,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavController) {
 
         Spacer(Modifier.height(28.dp))
         Row(
-            Modifier.fillMaxWidth().glass(20.dp).clickable { nav.navigate("projects") }.padding(18.dp),
+            Modifier.fillMaxWidth().solidCard(20.dp).clickable { nav.navigate("projects") }.padding(18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
@@ -215,12 +217,12 @@ fun HomeScreen(vm: AppViewModel, nav: NavController) {
 @Composable
 private fun HomeTabs(selected: Int, continueCount: Int, onSelect: (Int) -> Unit) {
     val labels = listOf("New project", if (continueCount > 0) "Continue ($continueCount)" else "Continue", "Download")
-    Row(Modifier.fillMaxWidth().glass(16.dp).padding(4.dp)) {
+    Row(Modifier.fillMaxWidth().solidCard(16.dp).padding(4.dp)) {
         labels.forEachIndexed { i, label ->
             val on = selected == i
             Box(
                 Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
-                    .background(if (on) GlassFillStrong else Color.Transparent)
+                    .background(if (on) PanelStrong else Color.Transparent)
                     .clickable { onSelect(i) }
                     .padding(vertical = 11.dp),
                 contentAlignment = Alignment.Center
@@ -248,7 +250,7 @@ private fun DownloadTab(vm: AppViewModel) {
     Spacer(Modifier.height(10.dp))
     Muted("Paste a YouTube video, YouTube Short or Instagram reel link. You get the original video, in up to 1080p, with no added watermark.")
     Spacer(Modifier.height(24.dp))
-    Column(Modifier.fillMaxWidth().glass(24.dp).padding(16.dp)) {
+    Column(Modifier.fillMaxWidth().solidCard(24.dp).padding(16.dp)) {
         OutlinedTextField(
             value = link,
             onValueChange = { link = it; vm.clearSave() },
@@ -258,7 +260,7 @@ private fun DownloadTab(vm: AppViewModel) {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Accent, unfocusedBorderColor = Color(0x40FFFFFF),
+                focusedBorderColor = Accent, unfocusedBorderColor = Edge,
                 focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, cursorColor = Accent
             )
         )
@@ -267,7 +269,7 @@ private fun DownloadTab(vm: AppViewModel) {
             SoftButton("Paste", Modifier.weight(1f), enabled = !ui.running) {
                 clipboard.getText()?.text?.let { link = it.trim(); vm.clearSave() }
             }
-            GradientButton("Download", Modifier.weight(2f), enabled = !ui.running && link.isNotBlank()) { vm.saveVideo(link) }
+            PrimaryButton("Download", Modifier.weight(2f), enabled = !ui.running && link.isNotBlank()) { vm.saveVideo(link) }
         }
         Spacer(Modifier.height(10.dp))
         Muted("Only save videos you own or have permission to save.")
@@ -276,7 +278,7 @@ private fun DownloadTab(vm: AppViewModel) {
     Spacer(Modifier.height(16.dp))
     when {
         ui.running -> {
-            Column(Modifier.fillMaxWidth().glass(20.dp).padding(16.dp)) {
+            Column(Modifier.fillMaxWidth().solidCard(20.dp).padding(16.dp)) {
                 if (ui.title.isNotBlank()) Text(ui.title, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
                 Spacer(Modifier.height(6.dp))
                 Muted(ui.stage + (ui.progress?.let { " ${(it * 100).toInt()}%" } ?: ""))
@@ -290,7 +292,7 @@ private fun DownloadTab(vm: AppViewModel) {
             }
         }
         ui.done -> {
-            Column(Modifier.fillMaxWidth().glass(20.dp).padding(16.dp)) {
+            Column(Modifier.fillMaxWidth().solidCard(20.dp).padding(16.dp)) {
                 Text("Saved to your gallery", color = Accent2, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
                 if (ui.title.isNotBlank()) Text(ui.title, color = TextPrimary, fontSize = 14.sp, maxLines = 2)
@@ -336,7 +338,6 @@ private fun ContinueTab(
                     total = counts[p.id] ?: 0,
                     waiting = unexported[p.id] ?: 0,
                     live = if (running) live else null,
-                    canRetry = File(p.sourcePath).exists(),
                     onOpen = {
                         when {
                             running -> nav.navigate("analysis/${p.id}")
@@ -364,13 +365,13 @@ private fun ContinueCard(
     total: Int,
     waiting: Int,
     live: AnalysisUi?,
-    canRetry: Boolean,
     onOpen: () -> Unit,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Column(Modifier.fillMaxWidth().glass(20.dp)) {
+    val canRetry = remember(p.sourcePath) { File(p.sourcePath).exists() }
+    Column(Modifier.fillMaxWidth().solidCard(20.dp)) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             FileImage(p.thumbPath, Modifier.size(width = 104.dp, height = 66.dp).clip(RoundedCornerShape(12.dp)))
             Spacer(Modifier.size(12.dp))
@@ -403,10 +404,10 @@ private fun ContinueCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (p.status == "READY") {
-                    GradientButton("Open & export", Modifier.weight(1f), onClick = onOpen)
+                    PrimaryButton("Open & export", Modifier.weight(1f), onClick = onOpen)
                     SoftButton("Dismiss", onClick = onDismiss)
                 } else {
-                    if (canRetry) GradientButton("Retry", Modifier.weight(1f), onClick = onRetry)
+                    if (canRetry) PrimaryButton("Retry", Modifier.weight(1f), onClick = onRetry)
                     SoftButton("Delete", danger = true, onClick = onDelete)
                 }
             }
@@ -457,7 +458,7 @@ fun SourceScreen(vm: AppViewModel, nav: NavController) {
             if (ready.localPath != null) {
                 VideoPlayer(Uri.fromFile(File(ready.localPath)), Modifier.fillMaxWidth().aspectRatio(16f / 9f))
             } else {
-                Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).glass(18.dp)) {
+                Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).solidCard(18.dp)) {
                     ready.thumb?.let {
                         androidx.compose.foundation.Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     }
@@ -478,12 +479,12 @@ fun SourceScreen(vm: AppViewModel, nav: NavController) {
             if (ready.localPath == null) {
                 Muted("To preview and analyse a YouTube video, ClipForge first downloads it to this phone.")
                 Spacer(Modifier.height(12.dp))
-                GradientButton("Download video", Modifier.fillMaxWidth()) { vm.downloadYoutube() }
+                PrimaryButton("Download video", Modifier.fillMaxWidth()) { vm.downloadYoutube() }
             } else {
                 Muted("Play the video above to check it, then choose your clip settings.")
                 Spacer(Modifier.height(16.dp))
 
-                Column(Modifier.fillMaxWidth().glass(20.dp).padding(16.dp)) {
+                Column(Modifier.fillMaxWidth().solidCard(20.dp).padding(16.dp)) {
                     Text("Clip length", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Muted("Each clip will be between ${lengthRange.start.roundToInt()}s and ${lengthRange.endInclusive.roundToInt()}s")
                     RangeSlider(
@@ -513,7 +514,7 @@ fun SourceScreen(vm: AppViewModel, nav: NavController) {
                     Muted("If the video has fewer strong moments than you ask for, you get fewer clips.")
                 }
                 Spacer(Modifier.height(16.dp))
-                GradientButton("Analyse video", Modifier.fillMaxWidth()) {
+                PrimaryButton("Analyse video", Modifier.fillMaxWidth()) {
                     val needsAsk = Build.VERSION.SDK_INT >= 33 &&
                         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
                     if (needsAsk) notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) else startNow()
@@ -576,7 +577,7 @@ fun AnalysisScreen(vm: AppViewModel, nav: NavController, projectId: String) {
             Spacer(Modifier.height(10.dp))
             Text(s.error, color = Danger, fontSize = 15.sp)
             Spacer(Modifier.height(28.dp))
-            GradientButton("Back to My Projects", Modifier.fillMaxWidth()) {
+            PrimaryButton("Back to My Projects", Modifier.fillMaxWidth()) {
                 leaving = true
                 nav.navigate("projects") { popUpTo("home") }
             }
@@ -592,7 +593,7 @@ fun AnalysisScreen(vm: AppViewModel, nav: NavController, projectId: String) {
             Spacer(Modifier.height(8.dp))
             Muted("You can leave the app. ClipForge keeps working and sends a notification when your highlights are ready. Long videos take a few minutes.")
             Spacer(Modifier.height(28.dp))
-            GradientButton("Continue in background") {
+            PrimaryButton("Continue in background") {
                 leaving = true
                 nav.navigate("home") { popUpTo("home") { inclusive = true } }
             }
@@ -608,8 +609,10 @@ fun AnalysisScreen(vm: AppViewModel, nav: NavController, projectId: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultsScreen(vm: AppViewModel, nav: NavController, projectId: String) {
-    val project by vm.project(projectId).collectAsStateWithLifecycle(null)
-    val clips by vm.clips(projectId).collectAsStateWithLifecycle(emptyList())
+    val projectFlow = remember(projectId) { vm.project(projectId) }
+    val clipsFlow = remember(projectId) { vm.clips(projectId) }
+    val project by projectFlow.collectAsStateWithLifecycle(null)
+    val clips by clipsFlow.collectAsStateWithLifecycle(emptyList())
     val selected = remember { mutableStateListOf<String>() }
     var previewId by remember { mutableStateOf<String?>(null) }
     var deleteClip by remember { mutableStateOf<ClipEntity?>(null) }
@@ -639,7 +642,7 @@ fun ResultsScreen(vm: AppViewModel, nav: NavController, projectId: String) {
             }
         } else {
             LazyColumn(Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                items(clips, key = { it.id }) { c ->
+                items(clips, key = { it.id }, contentType = { "clip" }) { c ->
                     ClipCard(
                         c,
                         checked = c.id in selected,
@@ -655,7 +658,7 @@ fun ResultsScreen(vm: AppViewModel, nav: NavController, projectId: String) {
                     if (selected.isEmpty()) "Select clips" else "Export ${selected.size} selected",
                     Modifier.weight(1f), enabled = selected.isNotEmpty()
                 ) { exportList = clips.filter { it.id in selected } }
-                GradientButton("Export all", Modifier.weight(1f)) { exportList = clips }
+                PrimaryButton("Export all", Modifier.weight(1f)) { exportList = clips }
             }
         }
         if (clips.isEmpty() && p != null) {
@@ -702,8 +705,8 @@ private fun ClipCard(
     onExport: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val exists = File(c.filePath).exists()
-    Column(Modifier.fillMaxWidth().glass(22.dp)) {
+    val exists = remember(c.filePath) { File(c.filePath).exists() }
+    Column(Modifier.fillMaxWidth().solidCard(22.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clickable(enabled = exists, onClick = onPreview)) {
             FileImage(c.thumbPath, Modifier.fillMaxSize())
             Box(Modifier.align(Alignment.Center).size(54.dp).clip(CircleShape).background(Color(0x99000000)), contentAlignment = Alignment.Center) {
@@ -786,14 +789,19 @@ private fun ClipPreview(
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                     if (file.exists()) {
-                        VideoPlayer(
-                            Uri.fromFile(file),
-                            Modifier.fillMaxSize(),
-                            aspect = aspect,
-                            autoPlay = page == pager.currentPage,
-                            loop = true,
-                            cornerRadius = 14.dp
-                        )
+                        if (page == pager.settledPage) {
+                            VideoPlayer(
+                                Uri.fromFile(file),
+                                Modifier.fillMaxSize(),
+                                aspect = aspect,
+                                autoPlay = true,
+                                loop = true,
+                                cornerRadius = 14.dp
+                            )
+                        } else {
+                            // While swiping, show the thumbnail. The player is built once the page has settled.
+                            FileImage(c.thumbPath, Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)), ContentScale.Fit)
+                        }
                     } else {
                         Text("This clip's file is missing from storage.", color = Danger, fontSize = 14.sp)
                     }
@@ -825,7 +833,7 @@ private fun ClipPreview(
                 SoftButton("↑", enabled = current > 0) { scope.launch { pager.animateScrollToPage(current - 1) } }
                 SoftButton("↓", enabled = current < clips.size - 1) { scope.launch { pager.animateScrollToPage(current + 1) } }
                 SoftButton("Delete", danger = true) { onDelete(cur) }
-                GradientButton("Export", Modifier.weight(1f)) { onExport(cur) }
+                PrimaryButton("Export", Modifier.weight(1f)) { onExport(cur) }
             }
         }
     }
@@ -834,7 +842,7 @@ private fun ClipPreview(
 @Composable
 fun PlayerDialog(title: String, file: File, onClose: () -> Unit) {
     Dialog(onDismissRequest = onClose) {
-        Column(Modifier.glass(24.dp).padding(16.dp)) {
+        Column(Modifier.solidCard(24.dp).padding(16.dp)) {
             Text(title, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
             if (file.exists()) {
@@ -907,7 +915,7 @@ private fun ExportSheet(vm: AppViewModel, clips: List<ClipEntity>, onDismiss: ()
                     Muted("Original keeps the clip exactly as cut, with no re-compression.")
                 }
                 Spacer(Modifier.height(18.dp))
-                GradientButton("Export", Modifier.fillMaxWidth()) { vm.export(clips, aspect, quality) }
+                PrimaryButton("Export", Modifier.fillMaxWidth()) { vm.export(clips, aspect, quality) }
             }
 
             if (state.running) {
@@ -935,14 +943,14 @@ private fun ExportSheet(vm: AppViewModel, clips: List<ClipEntity>, onDismiss: ()
                     }
                 }
                 Spacer(Modifier.height(14.dp))
-                GradientButton("Done", Modifier.fillMaxWidth()) { vm.resetExport(); onDismiss() }
+                PrimaryButton("Done", Modifier.fillMaxWidth()) { vm.resetExport(); onDismiss() }
             }
         }
     }
 
     preview?.let { (title, uri) ->
         Dialog(onDismissRequest = { preview = null }) {
-            Column(Modifier.glass(24.dp).padding(16.dp)) {
+            Column(Modifier.solidCard(24.dp).padding(16.dp)) {
                 Text(title, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(12.dp))
                 VideoPlayer(uri, Modifier.fillMaxWidth().height(320.dp), autoPlay = true)
@@ -967,7 +975,7 @@ fun ProjectsScreen(vm: AppViewModel, nav: NavController) {
         Spacer(Modifier.height(8.dp))
         if (projects.isEmpty()) {
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Box(Modifier.size(72.dp).glass(22.dp, strong = true), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(72.dp).solidCard(22.dp, strong = true), contentAlignment = Alignment.Center) {
                     androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.clipforge.app.R.drawable.ic_logo), null, Modifier.size(40.dp))
                 }
                 Spacer(Modifier.height(16.dp))
@@ -975,12 +983,12 @@ fun ProjectsScreen(vm: AppViewModel, nav: NavController) {
                 Spacer(Modifier.height(6.dp))
                 Muted("Analyse a video and its clips will be saved here.")
                 Spacer(Modifier.height(20.dp))
-                GradientButton("Start a project") { nav.popBackStack() }
+                PrimaryButton("Start a project") { nav.popBackStack() }
             }
         } else {
             LazyVerticalGrid(GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 gridItems(projects, key = { it.id }) { p ->
-                    Column(Modifier.glass(20.dp).clickable { nav.navigate("results/${p.id}") }) {
+                    Column(Modifier.solidCard(20.dp).clickable { nav.navigate("results/${p.id}") }) {
                         Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f)) {
                             FileImage(p.thumbPath, Modifier.fillMaxSize())
                             Pill(

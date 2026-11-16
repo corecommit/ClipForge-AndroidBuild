@@ -3,13 +3,23 @@ package com.clipforge.app
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavType
@@ -18,6 +28,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.clipforge.app.ui.AnalysisScreen
+import com.clipforge.app.ui.Bg
 import com.clipforge.app.ui.ClipForgeTheme
 import com.clipforge.app.ui.EditorScreen
 import com.clipforge.app.ui.HomeScreen
@@ -32,7 +43,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
         openProject = intent?.getStringExtra(EXTRA_PROJECT)
         askBatteryExemptionOnce()
         setContent { ClipForgeTheme { App(openProject) { openProject = null } } }
@@ -87,12 +101,22 @@ private fun App(openProject: String?, onOpened: () -> Unit) {
         }
     }
 
-    NavHost(nav, startDestination = "home") {
-        composable("home") { HomeScreen(vm, nav) }
-        composable("source") { SourceScreen(vm, nav) }
-        composable("analysis/{id}", idArg) { AnalysisScreen(vm, nav, it.arguments?.getString("id").orEmpty()) }
-        composable("results/{id}", idArg) { ResultsScreen(vm, nav, it.arguments?.getString("id").orEmpty()) }
-        composable("projects") { ProjectsScreen(vm, nav) }
-        composable("editor") { EditorScreen(vm, nav) }
+    // The default page change is a long 700 ms cross-fade of two full screens. A short one-sided fade keeps it snappy.
+    Box(Modifier.fillMaxSize().background(Bg)) {
+        NavHost(
+            nav,
+            startDestination = "home",
+            enterTransition = { fadeIn(tween(120)) },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { fadeOut(tween(120)) }
+        ) {
+            composable("home") { HomeScreen(vm, nav) }
+            composable("source") { SourceScreen(vm, nav) }
+            composable("analysis/{id}", idArg) { AnalysisScreen(vm, nav, it.arguments?.getString("id").orEmpty()) }
+            composable("results/{id}", idArg) { ResultsScreen(vm, nav, it.arguments?.getString("id").orEmpty()) }
+            composable("projects") { ProjectsScreen(vm, nav) }
+            composable("editor") { EditorScreen(vm, nav) }
+        }
     }
 }

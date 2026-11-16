@@ -3,6 +3,7 @@ package com.clipforge.app.ui
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -58,14 +60,14 @@ fun clock(ms: Long): String {
 
 fun dateText(ms: Long): String = SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault()).format(Date(ms))
 
-/** Gradient primary button. */
+/** Solid dark-blue primary button. */
 @Composable
-fun GradientButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
-            .background(if (enabled) AccentBrush else androidx.compose.ui.graphics.SolidColor(GlassFill))
-            .border(1.dp, androidx.compose.ui.graphics.Color(0x40FFFFFF), RoundedCornerShape(18.dp))
+            .background(if (enabled) ButtonBlue else Panel)
+            .border(1.dp, if (enabled) Color(0xFF2F63C8) else Edge, RoundedCornerShape(18.dp))
             .clickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 15.dp, horizontal = 20.dp),
         contentAlignment = Alignment.Center
@@ -86,12 +88,12 @@ fun SoftButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = t
         enabled = enabled,
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0x33FFFFFF)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Edge),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 11.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = GlassFillStrong,
+            containerColor = PanelStrong,
             contentColor = if (danger) Danger else TextPrimary,
-            disabledContainerColor = GlassFill,
+            disabledContainerColor = Panel,
             disabledContentColor = TextSecondary
         )
     ) { Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium) }
@@ -111,17 +113,36 @@ fun Pill(text: String, modifier: Modifier = Modifier, color: androidx.compose.ui
     )
 }
 
-/** Loads an image file off the main thread. Shows a plain placeholder if it is missing. */
+/** Small in-memory cache so thumbnails don't get decoded again every time a card scrolls back into view. */
+private object ThumbCache {
+    private val cache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+    }
+    fun get(path: String): Bitmap? = cache.get(path)
+    fun put(path: String, bmp: Bitmap) { cache.put(path, bmp) }
+}
+
+/** Loads an image file off the main thread (cached). Shows a plain placeholder if it is missing. */
 @Composable
-fun FileImage(path: String?, modifier: Modifier = Modifier) {
-    val bmp by produceState<Bitmap?>(null, path) {
-        value = if (path == null) null else withContext(Dispatchers.IO) {
-            if (File(path).exists()) BitmapFactory.decodeFile(path) else null
+fun FileImage(path: String?, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop) {
+    val bmp by produceState<Bitmap?>(path?.let { ThumbCache.get(it) }, path) {
+        if (path == null) {
+            value = null
+            return@produceState
+        }
+        val hit = ThumbCache.get(path)
+        if (hit != null) {
+            value = hit
+            return@produceState
+        }
+        value = withContext(Dispatchers.IO) {
+            if (File(path).exists()) BitmapFactory.decodeFile(path)?.also { ThumbCache.put(path, it) } else null
         }
     }
     Box(modifier.background(Bg2)) {
-        bmp?.let {
-            Image(it.asImageBitmap(), null, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+        bmp?.let { b ->
+            val image = remember(b) { b.asImageBitmap() }
+            Image(image, null, Modifier.matchParentSize(), contentScale = contentScale)
         }
     }
 }
